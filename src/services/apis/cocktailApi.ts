@@ -20,3 +20,17 @@ export const fetchUniqueRandomCocktails = async () => {
 
   return cocktails;
 };
+
+export const fetchCocktails = async ({
+  queryKey,
+  pageParam = 1,
+}: {
+  queryKey: string[];
+  pageParam?: number;
+}) => {
+  const searchTerm = queryKey[1];
+  if (!searchTerm) return { drinks: [] };
+
+  const response = await apiClient.get(`/search.php?s=${searchTerm}`);
+  return response.data;
+};

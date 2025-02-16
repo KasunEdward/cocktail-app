@@ -3,7 +3,10 @@
 const nextConfig = {
   images: {
     domains: ["www.thecocktaildb.com"], // Allow images from this domain
-  }
+  },
+  experimental: {
+    turbopack: false, // Disable Turbopack
+  },
 };
 
 module.exports = nextConfig;

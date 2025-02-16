@@ -1,12 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
-import apiClient from "@/services/apiClient";
-import { fetchUniqueRandomCocktails } from "@/services/cocktailService";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import apiClient from "@/services/apis/apiClient";
+import { fetchCocktails, fetchUniqueRandomCocktails } from "@/services/apis/cocktailApi";
 
-vi.mock("@/services/apiClient");
+vi.mock("@/services/apis/apiClient");
 
 const mockedApiClient = vi.mocked(apiClient);
 
 describe("fetchUniqueRandomCocktails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks(); // Reset mocks before each test
+  });
   it("should fetch 5 unique random cocktails", async () => {
     const mockDrinks = [
       { idDrink: "1", strDrink: "Mojito", strDrinkThumb: "mojito.jpg", strCategory: "Cocktail" },
@@ -38,3 +41,26 @@ describe("fetchUniqueRandomCocktails", () => {
   });
 });
 
+describe("fetchCocktails", () => {
+  it("fetches data with the correct search term", async () => {
+    const mockData = { drinks: [{ idDrink: "123", strDrink: "Margarita" }] };
+    apiClient.get.mockResolvedValueOnce({ data: mockData });
+
+    const result = await fetchCocktails({ queryKey: ["cocktails", "Margarita"] });
+
+    expect(apiClient.get).toHaveBeenCalledWith("/search.php?s=Margarita");
+    expect(result).toEqual(mockData);
+  });
+
+  it("returns an empty drinks array if no search term is provided", async () => {
+    const result = await fetchCocktails({ queryKey: ["cocktails", ""] });
+
+    expect(result).toEqual({ drinks: [] });
+  });
+
+  it("handles API errors gracefully", async () => {
+    apiClient.get.mockRejectedValueOnce(new Error("Network Error"));
+
+    await expect(fetchCocktails({ queryKey: ["cocktails", "Margarita"] })).rejects.toThrow("Network Error");
+  });
+});

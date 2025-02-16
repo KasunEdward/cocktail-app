@@ -1,11 +1,19 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useCocktailStore } from "@/store/cocktailStore";
+import { Cocktail, useCocktailStore } from "@/store/cocktailStore";
 import Image from "next/image";
 import debounce from "lodash/debounce";
-import apiClient from "@/services/apiClient";
+import apiClient from "@/services/apis/apiClient";
+import SearchCard from "@/components/cards/searchCard";
+import { useCocktailSearch } from "@/services/queries/cocktailSearch";
 
-const fetchCocktails = async ({ queryKey, pageParam = 1 }: { queryKey: string[]; pageParam?: number }) => {
+const fetchCocktails = async ({
+  queryKey,
+  pageParam = 1,
+}: {
+  queryKey: string[];
+  pageParam?: number;
+}) => {
   const searchTerm = queryKey[1];
   if (!searchTerm) return { drinks: [] };
 
@@ -17,43 +25,32 @@ export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { addToFavorites, favorites } = useCocktailStore();
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: ["searchCocktails", searchTerm],
-    queryFn: fetchCocktails,
-    getNextPageParam: (_, pages) => (pages.length < 1 ? pages.length + 1 : undefined),
-    enabled: !!searchTerm,
-    initialPageParam: 1,
-  });
+  const checkDisabled = (cocktail: Cocktail): boolean => {
+    return favorites.some((fav: Cocktail) => fav.idDrink === cocktail.idDrink);
+  };
+  useEffect(() => {
+    console.log(favorites);
+  }, [favorites]);
 
-interface FetchCocktailsParams {
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
+    useCocktailSearch(searchTerm);
+
+  interface FetchCocktailsParams {
     queryKey: [string, string];
     pageParam?: number;
-}
+  }
 
-interface Cocktail {
-    idDrink: string;
-    strDrink: string;
-    strDrinkThumb: string;
-    strCategory: string;
-}
-
-interface FetchCocktailsResponse {
+  interface FetchCocktailsResponse {
     drinks: Cocktail[];
-}
+  }
 
-const debouncedSearch = useCallback(
+  const debouncedSearch = useCallback(
     debounce((value: string) => {
-        setSearchTerm(value);
-        refetch();
+      setSearchTerm(value);
+      refetch();
     }, 500),
     []
-);
+  );
 
   return (
     <div className="container mx-auto p-6 text-center">
@@ -63,30 +60,18 @@ const debouncedSearch = useCallback(
           type="text"
           placeholder="Search for a cocktail..."
           onChange={(e) => debouncedSearch(e.target.value)}
-          className="p-2 border rounded-md w-64"
+          className="p-2 border rounded-md w-2/5"
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {data?.pages?.flatMap((page: FetchCocktailsResponse) =>
           page.drinks?.map((cocktail: Cocktail) => (
-            <div key={cocktail.idDrink} className="border p-4 rounded-lg shadow-lg">
-              <Image
-            src={cocktail.strDrinkThumb}
-            alt={cocktail.strDrink}
-            width={200}
-            height={200}
-            className="rounded"
-              />
-              <h2 className="text-xl font-semibold mt-4">{cocktail.strDrink}</h2>
-              <button
-            onClick={() => addToFavorites(cocktail)}
-            disabled={favorites.some((fav: Cocktail) => fav.idDrink === cocktail.idDrink)}
-            className="mt-4 px-3 py-2 bg-green-500 text-white rounded disabled:bg-gray-400"
-              >
-            Add to Favorites
-              </button>
-            </div>
+            <SearchCard
+              cocktail={cocktail}
+              addToFavorites={addToFavorites}
+              checkDisabled={checkDisabled}
+            />
           ))
         )}
       </div>
